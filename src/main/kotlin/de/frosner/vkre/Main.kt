@@ -14,7 +14,13 @@ object Main {
                 val serverPort = server.start()
 
                 val client = Client(vertx)
-                client.sendRequest(serverPort)
+                client.sendRequest(
+                    port = serverPort,
+                    maxFailures = 1,
+                    timeout = 2000,
+                    fallbackOnFailure = false,
+                    resetTimeout = 10000
+                )
             } finally {
                 vertx.close()
             }

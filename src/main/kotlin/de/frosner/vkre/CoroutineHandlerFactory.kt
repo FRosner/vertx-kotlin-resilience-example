@@ -8,11 +8,17 @@ import kotlin.coroutines.CoroutineContext
 
 class CoroutineHandlerFactory(override val coroutineContext: CoroutineContext) : CoroutineScope {
 
-    fun <T> create(handler: suspend () -> T): Handler<Future<T>> =
+    fun <T> create(handler: suspend () -> T, failure: suspend (T) -> String? = { null }): Handler<Future<T>> =
         Handler {
             launch(coroutineContext) {
                 try {
-                    it.complete(handler())
+                    val res = handler()
+                    val potentialFailure = failure(res)
+                    if (potentialFailure != null) {
+                        it.fail(potentialFailure)
+                    } else {
+                        it.complete(res)
+                    }
                 } catch (e: Exception) {
                     it.fail(e)
                 }

@@ -14,6 +14,7 @@ object Main {
             try {
                 val responses: List<(RoutingContext) -> Unit> = listOf(
                     { ctx -> ctx.response().setStatusCode(500).end() },
+                    { ctx -> println(" Timing out") },
                     { ctx -> ctx.response().setStatusCode(200).end() }
                 )
                 val server = Server(vertx, responses)
@@ -25,7 +26,7 @@ object Main {
                     circuitBreakerOptions = circuitBreakerOptionsOf(
                         fallbackOnFailure = false,
                         maxFailures = 5,
-                        maxRetries = 1,
+                        maxRetries = 2,
                         resetTimeout = 10000,
                         timeout = 2000
                     )

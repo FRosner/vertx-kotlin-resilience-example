@@ -30,17 +30,24 @@ class Client(private val vertx: Vertx) {
         val response = breaker.executeCommandAwait(
             handlerFactory.create(
                 handler = {
+                    print("Requesting...")
                     client.get(port, "localhost", "/").sendAwait()
                 },
                 failure = {
                     when (it.statusCode()) {
-                        200 -> null
-                        else -> "Status code was ${it.statusCode()}"
+                        200 -> {
+                            println(" Success (200)")
+                            null
+                        }
+                        else -> {
+                            println(" Failure (${it.statusCode()})")
+                            "Status code was ${it.statusCode()}"
+                        }
                     }
                 }
             )
         ).statusCode()
-        println("Received response: $response")
+        println("Final response: $response")
     }
 
 }

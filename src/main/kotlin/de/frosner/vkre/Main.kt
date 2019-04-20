@@ -15,22 +15,38 @@ object Main {
                 val responses: List<(RoutingContext) -> Unit> = listOf(
                     { ctx -> ctx.response().setStatusCode(500).end() },
                     { ctx -> println(" Timing out") },
+                    { ctx -> println(" Timing out") },
                     { ctx -> ctx.response().setStatusCode(200).end() }
                 )
                 val server = Server(vertx, responses)
                 val serverPort = server.start()
 
-                val client = Client(vertx)
-                client.sendRequest(
-                    port = serverPort,
-                    circuitBreakerOptions = circuitBreakerOptionsOf(
+                val client = Client(
+                    vertx, circuitBreakerOptionsOf(
                         fallbackOnFailure = false,
-                        maxFailures = 5,
+                        maxFailures = 1,
                         maxRetries = 2,
-                        resetTimeout = 10000,
+                        resetTimeout = 5000,
                         timeout = 2000
                     )
                 )
+                try {
+                    client.sendRequest(port = serverPort)
+                } catch (e: Throwable) {
+                    println(e)
+                }
+                try {
+                    client.sendRequest(port = serverPort)
+                } catch (e: Throwable) {
+                    println(e)
+                }
+                println("Waiting for circuit to be open again...")
+                Thread.sleep(6000)
+                try {
+                    client.sendRequest(port = serverPort)
+                } catch (e: Throwable) {
+                    println(e)
+                }
             } finally {
                 vertx.close()
             }

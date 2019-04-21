@@ -24,7 +24,7 @@ dependencies {
     compile(group = "io.vertx", name = "vertx-lang-kotlin", version = vertxVersion)
     compile(group = "io.vertx", name = "vertx-lang-kotlin-coroutines", version = vertxVersion)
 
-    testCompile(group ="junit", name = "junit", version = "4.12")
+    testCompile(group = "junit", name = "junit", version = "4.12")
 }
 
 configure<JavaPluginConvention> {

@@ -1,11 +1,18 @@
 package de.frosner.vkre
 
+import io.vertx.circuitbreaker.CircuitBreaker
 import io.vertx.core.Vertx
 import io.vertx.ext.web.RoutingContext
 import io.vertx.kotlin.circuitbreaker.circuitBreakerOptionsOf
 import kotlinx.coroutines.runBlocking
 
 object Main {
+    suspend fun <T> tryOrPrint(f: suspend () -> T): Unit = try {
+        println("Fraud: ${f()}")
+    } catch (t: Throwable) {
+        println(t)
+    }
+
     @JvmStatic
     fun main(args: Array<String>) {
         runBlocking {
@@ -16,37 +23,35 @@ object Main {
                     { ctx -> ctx.response().setStatusCode(500).end() },
                     { ctx -> println(" Timing out") },
                     { ctx -> println(" Timing out") },
-                    { ctx -> ctx.response().setStatusCode(200).end() }
+                    { ctx -> ctx.response().setStatusCode(200).end("true") }
                 )
-                val server = Server(vertx, responses)
+                val server = FraudCheckApi(vertx, responses)
                 val serverPort = server.start()
 
-                val client = Client(
-                    vertx, circuitBreakerOptionsOf(
-                        fallbackOnFailure = false,
-                        maxFailures = 1,
-                        maxRetries = 2,
-                        resetTimeout = 5000,
-                        timeout = 2000
-                    )
+
+                /*
+                 * @param fallbackOnFailure  Sets whether or not the fallback is executed on failure, even when the circuit is closed.
+                 * @param maxFailures  Sets the maximum number of failures before opening the circuit.
+                 * @param maxRetries  Configures the number of times the circuit breaker tries to redo the operation before failing.
+                 * @param resetTimeout  Sets the time in ms before it attempts to re-close the circuit (by going to the half-open state). If the circuit is closed when the timeout is reached, nothing happens. <code>-1</code> disables this feature.
+                 * @param timeout  Sets the timeout in milliseconds. If an action is not completed before this timeout, the action is considered as a failure.
+                 */
+                val options = circuitBreakerOptionsOf(
+                    fallbackOnFailure = false,
+                    maxFailures = 1,
+                    maxRetries = 2,
+                    resetTimeout = 5000,
+                    timeout = 2000
                 )
-                try {
-                    client.sendRequest(port = serverPort)
-                } catch (e: Throwable) {
-                    println(e)
-                }
-                try {
-                    client.sendRequest(port = serverPort)
-                } catch (e: Throwable) {
-                    println(e)
-                }
+
+                val circuitBreaker = CircuitBreaker.create("my-circuit-breaker", vertx, options)
+                val client = FraudCheckService(vertx, circuitBreaker, "http://localhost:$serverPort/")
+
+                tryOrPrint { client.checkFraud() }
+                tryOrPrint { client.checkFraud() }
                 println("Waiting for circuit to be open again...")
                 Thread.sleep(6000)
-                try {
-                    client.sendRequest(port = serverPort)
-                } catch (e: Throwable) {
-                    println(e)
-                }
+                tryOrPrint { client.checkFraud() }
             } finally {
                 vertx.close()
             }

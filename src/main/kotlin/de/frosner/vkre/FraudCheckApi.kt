@@ -5,7 +5,7 @@ import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import io.vertx.kotlin.core.http.listenAwait
 
-class Server(private val vertx: Vertx, private val responses: List<(RoutingContext) -> Unit> = listOf()) {
+class FraudCheckApi(private val vertx: Vertx, private val responses: List<(RoutingContext) -> Unit> = listOf()) {
 
     private var responseIndex = 0
 

@@ -43,6 +43,47 @@ object Main {
         tryOrPrint { client.checkFraud() }
     }
 
+    suspend fun fallbackOnFailure(vertx: Vertx) {
+        val responses: List<(RoutingContext) -> Unit> = listOf(
+            { ctx -> ctx.response().setStatusCode(500).end() },
+            { ctx -> ctx.response().setStatusCode(500).end() }
+        )
+        val server = FraudCheckApi(vertx, responses)
+        val serverPort = server.start()
+
+        val options = circuitBreakerOptionsOf(
+            maxRetries = 1,
+            fallbackOnFailure = true
+        )
+
+        val circuitBreaker = CircuitBreaker.create(UUID.randomUUID().toString(), vertx, options)
+        val client = FraudCheckService(vertx, circuitBreaker, "http://localhost:$serverPort/")
+
+        tryOrPrint { client.checkFraudWithFallback(50) }
+    }
+
+    suspend fun waitForClosedCircuit(vertx: Vertx) {
+        val responses: List<(RoutingContext) -> Unit> = listOf(
+            { ctx -> ctx.response().setStatusCode(500).end() },
+            { ctx -> ctx.response().setStatusCode(200).end("true") }
+        )
+        val server = FraudCheckApi(vertx, responses)
+        val serverPort = server.start()
+
+        val options = circuitBreakerOptionsOf(
+            resetTimeout = 5000,
+            maxFailures = 1
+        )
+
+        val circuitBreaker = CircuitBreaker.create(UUID.randomUUID().toString(), vertx, options)
+        val client = FraudCheckService(vertx, circuitBreaker, "http://localhost:$serverPort/")
+
+        tryOrPrint { client.checkFraud() }
+        tryOrPrint { client.checkFraud() }
+        delay(6000) // can be implemented also based on event notifications on circuit state changes
+        tryOrPrint { client.checkFraud() }
+    }
+
     suspend fun test(vertx: Vertx) {
         val responses: List<(RoutingContext) -> Unit> = listOf(
             { ctx -> ctx.response().setStatusCode(500).end() },
@@ -84,7 +125,9 @@ object Main {
         runBlocking {
             val vertx = Vertx.vertx()
             try {
-                successAfterRetry(vertx)
+//                successAfterRetry(vertx)
+//                fallbackOnFailure(vertx)
+                waitForClosedCircuit(vertx)
             } finally {
                 vertx.close()
             }

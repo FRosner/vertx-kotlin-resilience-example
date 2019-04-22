@@ -26,7 +26,7 @@ class FraudCheckService(
                 handler = {
                     print("Requesting...")
                     val response = client.getAbs(apiUrl).sendAwait()
-                    Pair<HttpResponse<Buffer>, Boolean>(response, response.bodyAsString().toBoolean())
+                    Pair<HttpResponse<Buffer>, () -> Boolean>(response, { response.bodyAsString().toBoolean() })
                 },
                 failure = {
                     when (it.statusCode()) {
@@ -41,7 +41,7 @@ class FraudCheckService(
                     }
                 }
             )
-        )
+        )()
     }
 
     suspend fun checkFraudWithFallback(totalPrice: Int): Boolean {

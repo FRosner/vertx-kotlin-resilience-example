@@ -1,6 +1,8 @@
 package de.frosner.vkre
 
 import io.vertx.circuitbreaker.CircuitBreaker
+import io.vertx.core.Future
+import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.ext.web.client.HttpResponse
@@ -19,6 +21,18 @@ class FraudCheckService(
 
     private val client: WebClient = WebClient.create(vertx)
     private val handlerFactory = CoroutineHandlerFactory(vertx.dispatcher())
+
+    fun checkFraudFuture(): Unit {
+        circuitBreaker.executeCommand(
+            Handler<Future<String>> {
+                it.complete("OK")
+            },
+            Handler {
+                println(it)
+            }
+        )
+    }
+
 
     suspend fun checkFraud(): Boolean {
         return circuitBreaker.executeCommandAwait(

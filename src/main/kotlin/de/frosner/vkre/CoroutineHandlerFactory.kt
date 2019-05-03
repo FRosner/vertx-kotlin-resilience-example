@@ -28,4 +28,15 @@ class CoroutineHandlerFactory(override val coroutineContext: CoroutineContext) :
             }
         }
 
+    fun <T> create(handler: suspend () -> T): Handler<Future<T>> =
+        Handler {
+            launch(coroutineContext) {
+                try {
+                    it.complete(handler())
+                } catch (e: Exception) {
+                    it.fail(e)
+                }
+            }
+        }
+
 }

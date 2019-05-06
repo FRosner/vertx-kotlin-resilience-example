@@ -33,6 +33,24 @@ class FraudCheckService(
         )
     }
 
+    suspend fun checkFraudBasic(): Unit {
+        val result = circuitBreaker.executeCommandAwait(
+            handlerFactory.create {
+                "OK"
+            }
+        )
+        println(result)
+    }
+
+    suspend fun checkFraudCoroutine(): Unit {
+        val result = circuitBreaker.executeCommandAwait(
+            handlerFactory.create {
+                client.getAbs("http://wttr.in").sendAwait().bodyAsString()
+            }
+        )
+        println(result)
+    }
+
 
     suspend fun checkFraud(): Boolean {
         return circuitBreaker.executeCommandAwait(
